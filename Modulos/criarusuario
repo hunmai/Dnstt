@@ -9,18 +9,6 @@ scor='\033[0m'
 # Gerar client.ovpn
 newclient() {
     cp /etc/openvpn/client-common.txt ~/$1.ovpn
-    echo "<ca>" >>~/$1.ovpn
-    cat /etc/openvpn/easy-rsa/pki/ca.crt >>~/$1.ovpn
-    echo "</ca>" >>~/$1.ovpn
-    echo "<cert>" >>~/$1.ovpn
-    cat /etc/openvpn/easy-rsa/pki/issued/$1.crt >>~/$1.ovpn
-    echo "</cert>" >>~/$1.ovpn
-    echo "<key>" >>~/$1.ovpn
-    cat /etc/openvpn/easy-rsa/pki/private/$1.key >>~/$1.ovpn
-    echo "</key>" >>~/$1.ovpn
-    echo "<tls-auth>" >>~/$1.ovpn
-    cat /etc/openvpn/ta.key >>~/$1.ovpn
-    echo "</tls-auth>" >>~/$1.ovpn
 }
 fun_geraovpn() {
     [[ "$respost" = @(s|S) ]] && {
@@ -515,6 +503,8 @@ else
             echo -e "\033[1;32mPassword: \033[1;37m$password"
             echo -e "\033[1;32mExpiry date: \033[1;37m$gui"
             echo -e "\033[1;32mConnection limit: \033[1;37m$sshlimiter"
+            echo -e ""
+            echo -e "\033[1;32mOVPN LINK\033[1;37m: \033[1;36m$IP:81/openvpn/vpn.zip\033[0m"
         }
     } || {
         clear
@@ -524,6 +514,8 @@ else
         echo -e "\033[1;32mPassword: \033[1;37m$password"
         echo -e "\033[1;32mExpiry date: \033[1;37m$gui"
         echo -e "\033[1;32mConnection limit: \033[1;37m$sshlimiter"
+        echo -e ""
+        echo -e "\033[1;32mOVPN LINK\033[1;37m: \033[1;36m$IP:81/openvpn/vpn.zip\033[0m"
     }
 
 fi
