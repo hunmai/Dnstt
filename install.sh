@@ -444,7 +444,7 @@ chage -E $expiry_date "$username"
 
 # Save to database
 echo "$username|$password|$expiry_date|$limit|$(date +%Y-%m-%d)" >> /etc/VPNManager/users/userdb
-
+IP9=$(wget -4qO- "http://whatismyip.akamai.com/")
 echo ""
 echo -e "${GREEN}User created successfully!${NC}"
 echo -e "${BLUE}Username: ${GREEN}$username${NC}"
@@ -452,6 +452,7 @@ echo -e "${BLUE}Password: ${GREEN}$password${NC}"
 echo -e "${BLUE}Expiry: ${GREEN}$expiry_date${NC}"
 echo -e "${BLUE}Limit: ${GREEN}$limit${NC}"
 echo ""
+echo -e "\033[1;32mOVPN LINK\033[1;37m: \033[1;36m$IP9:81/openvpn/vpn.zip\033[0m"
 read -p "Press Enter to continue..."
 CREATEUSEREOF
     
