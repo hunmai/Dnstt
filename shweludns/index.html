@@ -3,832 +3,970 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DNS Record Manager</title>
+  <title>DNS RECORD</title>
   <style>
-    :root {
-      /* Modern Color Palette */
-      --primary: #3B82F6;
-      --primary-dark: #1D4ED8;
-      --secondary: #8B5CF6;
-      --success: #10B981;
-      --warning: #F59E0B;
-      --error: #EF4444;
-      --info: #06B6D4;
-      
-      /* Neutral Colors */
-      --bg-primary: #F8FAFC;
-      --bg-secondary: #FFFFFF;
-      --bg-card: #FFFFFF;
-      --text-primary: #1E293B;
-      --text-secondary: #64748B;
-      --text-muted: #94A3B8;
-      --border: #E2E8F0;
-      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-      
-      /* Gradients */
-      --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      --gradient-success: linear-gradient(135deg, #10B981 0%, #059669 100%);
-      --gradient-card: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+    :root{
+      --fg:#0b1220; --muted:#5b6b84; --line:#d8e3ee;
+
+      /* Accents - More vibrant */
+      --accent:#0ea5e9;          /* teal-blue for IPs */
+      --accent-ink:#0ea5e9;
+      --ok:#10b981;              /* green for hostnames */
+      --ok-bright:#059669;
+      --warn:#f59e0b; --err:#ef4444;
+
+      --time:#8b5cf6;            /* Server Time (purple) */
+      --loc:#06b6d4;             /* Location (teal) */
+
+      /* Softer, more eye-pleasing background palette */
+      --bg1:#f1f8ff;   /* soft sky */
+      --bg2:#ecfff7;   /* mint */
+      --bg3:#f7ecff;   /* lavender */
+      --card:#ffffffcf; --card-tint:#f8fafc;
+
+      /* Enhanced gradient for buttons */
+      --tri: linear-gradient(90deg, #10b981 0%, #06b6d4 50%, #60a5fa 100%);
+
+      --shadow-strong: 0 20px 40px rgba(11,18,32,.12);
+      --shadow-soft:   0 8px 20px rgba(11,18,32,.05);
+      --card-bg-plain:#ffffffd9;
+      --table-row:#fff;
+      --grain: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'>\
+<filter id='f'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/><feComponentTransfer><feFuncA type='linear' slope='0.035'/></feComponentTransfer></filter>\
+<rect width='100%' height='100%' filter='url(#f)'/>\
+</svg>");
     }
 
-    [data-theme="dark"] {
-      --bg-primary: #0F172A;
-      --bg-secondary: #1E293B;
-      --bg-card: #1E293B;
-      --text-primary: #F1F5F9;
-      --text-secondary: #CBD5E1;
-      --text-muted: #64748B;
-      --border: #334155;
-      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    /* ===== Dark mode (soft deep tones) ===== */
+    [data-theme="dark"]{
+      --fg:#e5eefc; --muted:#9fb1c9; --line:#223043;
+      --accent:#7dd3fc; --accent-ink:#7dd3fc;
+      --ok:#34d399; --ok-bright:#34d399;
+      --time:#c4b5fd;
+      --loc:#67e8f9;
+      --bg1:#07141f;   /* deep blue-charcoal */
+      --bg2:#0b1e2a;   /* slate-teal */
+      --bg3:#101f33;   /* night blue */
+      --card:#0e1726ee; --card-tint:#0a1320;
+      --warn:#fbbf24; --err:#f87171;
+      --shadow-strong: 0 20px 40px rgba(0,0,0,.45);
+      --shadow-soft:   0 8px 20px rgba(0,0,0,.35);
+      --card-bg-plain:#0f172acc;
+      --table-row:#0c1423;
     }
 
-    /* Base Styles */
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+      color:var(--fg);
+      background:
+        radial-gradient(1200px 700px at 15% 0%, var(--bg1) 0%, transparent 60%),
+        radial-gradient(1300px 800px at 90% 20%, var(--bg2) 0%, transparent 55%),
+        radial-gradient(900px 600px at 50% 110%, var(--bg3) 0%, transparent 50%),
+        linear-gradient(160deg,#f8fafc 0%, #f0fbff 45%, #f9f5ff 100%);
+      position:relative;
+      min-height:100vh; display:flex; align-items:start; justify-content:center; padding:20px;
+      transition: background .3s ease, color .2s ease;
+    }
+    body::after{
+      content:""; position:fixed; inset:0; pointer-events:none;
+      background-image: var(--grain);
+      mix-blend-mode:multiply; opacity:.22;
+    }
+    [data-theme="dark"]{
+      background:
+        radial-gradient(1400px 700px at 10% -10%, var(--bg1) 0%, transparent 60%),
+        radial-gradient(1400px 800px at 100% 30%, var(--bg2) 0%, transparent 55%),
+        radial-gradient(900px 600px at 50% 110%, var(--bg3) 0%, transparent 50%),
+        linear-gradient(160deg,#06111a 0%, #0a1a28 50%, #0d2134 100%);
     }
 
-    html, body {
-      height: 100%;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      transition: all 0.3s ease;
-      line-height: 1.6;
-    }
+    .wrap{width:100%;max-width:1040px;display:flex;flex-direction:column;gap:18px}
 
-    body {
-      min-height: 100vh;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 20px;
-      position: relative;
+    /* Enhanced card with glassmorphism effect */
+    .card{
+      position:relative;
+      background: linear-gradient(180deg,var(--card) 0%,var(--card-tint) 100%);
+      backdrop-filter:blur(14px);
+      border:1px solid var(--line); border-radius:20px;
+      box-shadow:var(--shadow-strong); padding:28px 24px;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      overflow: hidden;
     }
-
-    /* Background Effects */
-    body::before {
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 25px 50px rgba(11,18,32,.15);
+    }
+    .card::before {
       content: '';
-      position: fixed;
+      position: absolute;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 100%;
-      background: 
-        radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
-        radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.05) 0%, transparent 50%),
-        radial-gradient(circle at 50% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
-      pointer-events: none;
-      z-index: -1;
+      right: 0;
+      height: 3px;
+      background: var(--tri);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .card:hover::before {
+      opacity: 1;
     }
 
-    [data-theme="dark"] body::before {
-      background: 
-        radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 50% 80%, rgba(16, 185, 129, 0.08) 0%, transparent 50%);
-    }
+    /* Enhanced headings */
+    h1{font-size:32px;margin-bottom:6px;letter-spacing:.3px;background:var(--tri);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800}
+    h2{font-size:24px;margin-bottom:10px;letter-spacing:.2px;font-weight:700}
+    .byline{color:var(--accent-ink);font-weight:800;margin-bottom:14px;font-size:15px}
+    
+    /* Enhanced form elements */
+    form{display:grid;gap:14px}
+    .row{display:grid;gap:8px;grid-template-columns:1fr;align-items:center}
 
-    /* Layout */
-    .container {
-      width: 100%;
-      max-width: 1200px;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
+    label{color:var(--muted);font-size:14px;font-weight:500}
+    input,select{
+      width:100%;height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;
+      font-size:16px;background:#fff;outline:none;transition:all 0.3s ease;
+      color:#0b1220;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
+    [data-theme="dark"] input,[data-theme="dark"] select{
+      background:#0b1422; color:var(--fg); border-color:#1f2a38;
+    }
+    input:focus,select:focus{
+      border-color:transparent;
+      box-shadow:0 0 0 4px rgba(14,165,233,.18), inset 0 0 0 1.5px var(--accent), 0 5px 15px rgba(14,165,233,.1);
+      transform: translateY(-2px);
+    }
+    .btns{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap}
 
-    /* Header Section */
-    .header {
-      text-align: center;
-      padding: 40px 20px;
-      background: var(--gradient-primary);
-      border-radius: 20px;
-      color: white;
-      margin-bottom: 20px;
-      box-shadow: var(--shadow);
+    /* Enhanced Buttons */
+    button{
+      height:44px;border-radius:12px;font-weight:800;letter-spacing:.2px;cursor:pointer;
+      border:0; padding:0 14px;
+      background-image:var(--tri); background-size:200% 100%;
+      color:#fff;
+      box-shadow:0 8px 20px rgba(11,18,32,.15);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
       position: relative;
       overflow: hidden;
     }
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s;
+    }
+    button:hover::before {
+      left: 100%;
+    }
+    button:hover{transform:translateY(-3px); background-position:right center; filter:saturate(1.05); box-shadow:0 12px 25px rgba(11,18,32,.2)}
+    button:active{transform:translateY(0)}
 
-    .header::before {
+    .btn-mini{height:34px;padding:0 10px;border-radius:10px;font-weight:700}
+    .row-actions .btn-mini{
+      background-image:var(--tri); background-size:200% 100%; color:#fff; border:0;
+    }
+    .row-actions .btn-mini.ghost{
+      background:transparent; color:transparent; border:2px solid transparent;
+      background-image:var(--tri); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+      border-image: var(--tri) 1; box-shadow:0 6px 12px rgba(11,18,32,.08);
+    }
+
+    /* Enhanced Messages */
+    #msg,#lookupMsg,#searchMsg{
+      margin-top:12px;padding:12px;border-radius:12px;border:1px solid var(--line);
+      background:#f8fafc;min-height:44px;white-space:pre-wrap; transition: all 0.3s ease;
+      color:#0b1220;
+    }
+    [data-theme="dark"] #msg,[data-theme="dark"] #lookupMsg,[data-theme="dark"] #searchMsg{
+      background:#0b1422; color:var(--fg); border-color:#1f2a38;
+    }
+    
+    /* Enhanced Footer */
+    .footer{
+      text-align:center;margin-top:2px;font-size:13px;color:var(--fg);background:var(--card-bg-plain);border:1px solid var(--line);
+      border-radius:12px;padding:14px;box-shadow:var(--shadow-soft);
+      position: relative;
+      overflow: hidden;
+    }
+    .footer::before {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
-      bottom: 0;
-      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      height: 2px;
+      background: var(--tri);
+      opacity: 0.7;
     }
+    
+    .msg-ok{border-color:var(--ok)!important;background:#ecfdf5!important}
+    .msg-warn{border-color:var(--warn)!important;background:#fffbeb!important}
+    .msg-err{border-color:var(--err)!important;background:#fef2f2!important}
+    [data-theme="dark"] .msg-ok{background:#062814!important}
+    [data-theme="dark"] .msg-warn{background:#2a1f06!important}
+    [data-theme="dark"] .msg-err{background:#2a0b0b!important}
 
-    .header h1 {
-      font-size: 2.5rem;
-      font-weight: 800;
-      margin-bottom: 8px;
-      position: relative;
+    /* Enhanced Toggle */
+    .switch{position:relative;display:inline-flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+    .switch input{position:absolute;opacity:0;width:0;height:0}
+    .slider{
+      position:relative;width:44px;height:24px;border-radius:999px;background:#e5e7eb;border:1px solid #d1d5db;
+      transition:background .2s,border-color .2s,box-shadow .2s; box-shadow:inset 0 2px 4px rgba(0,0,0,.06)
     }
-
-    .header .subtitle {
-      font-size: 1.1rem;
-      opacity: 0.9;
-      font-weight: 500;
+    [data-theme="dark"] .slider{ background:#0b1422; border-color:#1f2a38; }
+    .slider::after{
+      content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:999px;
+      box-shadow:0 2px 6px rgba(0,0,0,.15);transition:all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)
     }
-
-    /* Card Components */
-    .card {
-      background: var(--bg-card);
-      border-radius: 16px;
-      padding: 28px;
-      box-shadow: var(--shadow);
-      border: 1px solid var(--border);
-      transition: all 0.3s ease;
-      position: relative;
+    [data-theme="dark"] .slider::after{ background:#e5eefc; }
+    .switch input:checked + .slider{
+      background:#fde68a; border-color:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.25) inset;
     }
+    .switch input:checked + .slider::after{left:23px; transform: scale(1.1);}
 
-    .card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-    }
+    .cf-note{font-size:12px;color:var(--muted)}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--fg);background:#fff;margin-left:8px}
+    [data-theme="dark"] .pill{ background:#0b1422; }
 
-    .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 24px;
-    }
-
-    .card-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .card-title .icon {
-      width: 24px;
-      height: 24px;
-      color: var(--primary);
-    }
-
-    /* Status Grid */
-    .status-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 16px;
-      margin-top: 16px;
-    }
-
-    .status-item {
-      background: var(--bg-secondary);
-      padding: 20px;
-      border-radius: 12px;
-      border: 1px solid var(--border);
+    /* Enhanced Table */
+    .table-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch}
+    .table{width:100%;border-collapse:separate;border-spacing:0 8px;margin-top:8px;min-width:720px}
+    .table thead th{text-align:left;font-size:12px;color:var(--muted);padding:0 10px;white-space:nowrap}
+    .table tbody tr{
+      background:var(--table-row);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+      box-shadow:0 4px 10px rgba(11,18,32,.05);
       transition: all 0.3s ease;
     }
+    .table tbody tr:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(11,18,32,.1);
+    }
+    [data-theme="dark"] .table tbody tr{ box-shadow:0 4px 10px rgba(0,0,0,.35) }
+    [data-theme="dark"] .table tbody tr:hover { box-shadow: 0 8px 20px rgba(0,0,0,.5) }
+    .table td{padding:10px;font-size:14px;vertical-align:middle; color:var(--fg)}
 
-    .status-item:hover {
-      border-color: var(--primary);
-      transform: translateY(-2px);
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
+    .small{font-size:13px;color:var(--muted)}
+    .row-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .inpt{height:34px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:14px;width:100%}
+    [data-theme="dark"] .inpt{ background:#0b1422; color:var(--fg); }
+    .sel{height:34px;padding:0 8px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#fff}
+    [data-theme="dark"] .sel{ background:#0b1422; color:var(--fg); }
+
+    /* Enhanced Status */
+    .status{ display:grid; gap:12px; grid-template-columns:1fr; }
+    .status .items{ display:grid; gap:10px; grid-template-columns:1fr; }
+    .pillstat{ 
+      display:flex; flex-direction:column; gap:4px; border:1px solid var(--line); 
+      background:var(--table-row); border-radius:14px; padding:10px 12px; min-height:56px; 
+      justify-content:center; transition: all 0.3s ease;
+    }
+    .pillstat:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(11,18,32,.1);
+    }
+    .pillstat .k{font-size:12px;color:var(--muted)}
+    .pillstat .v{font-weight:700}
+
+    #serverTime{ color: var(--time); }
+    #yourIp{ color: var(--accent); }
+    #yourLoc{ color: var(--loc); }
+
+    /* === Stronger selectors to beat `.table td` === */
+    .table td.cell-name{ color: var(--ok-bright) !important; font-weight:700 !important; }
+    .table td .cell-content.ip{ color: var(--accent) !important; font-weight:700 !important; }
+    .table td .cell-content.host{ color: var(--ok-bright) !important; font-weight:700 !important; }
+
+    /* New floating action button for theme toggle */
+    .theme-fab{
+      position:fixed; right:18px; bottom:18px; z-index:9999;
+      width:54px; height:54px; border-radius:999px;
+      display:inline-flex; align-items:center; justify-content:center;
+      background-image:var(--tri); background-size:200% 100%;
+      color:#fff; border:0;
+      box-shadow:0 14px 30px rgba(59,130,246,.35);
+      cursor:pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      animation: pulse 2s infinite;
+    }
+    .theme-fab:hover{ 
+      transform: translateY(-5px) rotate(15deg); 
+      filter:saturate(1.05); 
+      background-position:right center; 
+      box-shadow:0 20px 40px rgba(59,130,246,.5);
+    }
+    .theme-fab:active{ transform: translateY(0) }
+    .theme-fab svg{ width:24px; height:24px }
+    .icon-sun{ display:inline }
+    .icon-moon{ display:none }
+    [data-theme="dark"] .icon-sun{ display:none }
+    [data-theme="dark"] .icon-moon{ display:inline }
+
+    /* Pulse animation for the FAB */
+    @keyframes pulse {
+      0% { box-shadow: 0 14px 30px rgba(59,130,246,.35); }
+      50% { box-shadow: 0 14px 30px rgba(59,130,246,.6), 0 0 0 10px rgba(59,130,246,.1); }
+      100% { box-shadow: 0 14px 30px rgba(59,130,246,.35); }
     }
 
-    .status-label {
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
-
-    .status-value {
-      font-size: 1.125rem;
-      font-weight: 600;
-      color: var(--text-primary);
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .status-value.ip { color: var(--primary); }
-    .status-value.time { color: var(--secondary); }
-    .status-value.location { color: var(--info); }
-
-    /* Form Elements */
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 20px;
-      margin-bottom: 24px;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .form-label {
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .form-input, .form-select {
-      padding: 12px 16px;
-      border: 2px solid var(--border);
-      border-radius: 10px;
-      font-size: 1rem;
-      background: var(--bg-secondary);
-      color: var(--text-primary);
-      transition: all 0.3s ease;
-      font-family: inherit;
-    }
-
-    .form-input:focus, .form-select:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
-
-    /* Toggle Switch */
-    .toggle-group {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 16px;
-      background: var(--bg-secondary);
-      border-radius: 12px;
-      border: 1px solid var(--border);
-    }
-
-    .toggle {
-      position: relative;
-      display: inline-block;
-      width: 52px;
-      height: 28px;
-    }
-
-    .toggle input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
-    .toggle-slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: var(--border);
-      transition: .4s;
-      border-radius: 34px;
-    }
-
-    .toggle-slider:before {
-      position: absolute;
-      content: "";
-      height: 20px;
-      width: 20px;
-      left: 4px;
-      bottom: 4px;
-      background: white;
-      transition: .4s;
-      border-radius: 50%;
-    }
-
-    input:checked + .toggle-slider {
-      background: var(--success);
-    }
-
-    input:checked + .toggle-slider:before {
-      transform: translateX(24px);
-    }
-
-    /* Buttons */
-    .btn {
-      padding: 12px 24px;
-      border: none;
-      border-radius: 10px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      font-family: inherit;
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background: var(--primary-dark);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
-    }
-
-    .btn-secondary {
-      background: var(--bg-secondary);
-      color: var(--text-primary);
-      border: 1px solid var(--border);
-    }
-
-    .btn-secondary:hover {
-      background: var(--border);
-      transform: translateY(-2px);
-    }
-
-    .btn-success {
-      background: var(--success);
-      color: white;
-    }
-
-    .btn-group {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    /* Table Styles */
-    .table-container {
-      overflow-x: auto;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      margin-top: 20px;
-    }
-
-    .table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 800px;
-    }
-
-    .table th {
-      background: var(--bg-secondary);
-      padding: 16px;
-      text-align: left;
-      font-weight: 600;
-      color: var(--text-secondary);
-      font-size: 0.875rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .table td {
-      padding: 16px;
-      border-bottom: 1px solid var(--border);
-      vertical-align: middle;
-    }
-
-    .table tr:last-child td {
-      border-bottom: none;
-    }
-
-    .table tr:hover {
-      background: var(--bg-secondary);
-    }
-
-    /* Action Buttons */
-    .action-buttons {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .btn-sm {
-      padding: 8px 12px;
-      font-size: 0.875rem;
-    }
-
-    .btn-outline {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text-primary);
-    }
-
-    .btn-outline:hover {
-      background: var(--bg-secondary);
-    }
-
-    /* Messages */
-    .message {
-      padding: 16px;
-      border-radius: 10px;
-      margin: 16px 0;
-      font-weight: 500;
-    }
-
-    .message-success {
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid var(--success);
-      color: var(--success);
-    }
-
-    .message-error {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid var(--error);
-      color: var(--error);
-    }
-
-    .message-warning {
-      background: rgba(245, 158, 11, 0.1);
-      border: 1px solid var(--warning);
-      color: var(--warning);
-    }
-
-    /* Footer */
-    .footer {
-      text-align: center;
-      padding: 24px;
-      color: var(--text-secondary);
-      font-size: 0.875rem;
-      border-top: 1px solid var(--border);
-      margin-top: 40px;
-    }
-
-    /* Theme Toggle */
-    .theme-toggle {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: var(--gradient-primary);
-      border: none;
-      color: white;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: var(--shadow);
-      transition: all 0.3s ease;
-      z-index: 1000;
-    }
-
-    .theme-toggle:hover {
-      transform: scale(1.1) rotate(15deg);
-    }
-
-    /* Loading Animation */
+    /* Loading animation */
     .loading {
       display: inline-block;
       width: 20px;
       height: 20px;
-      border: 2px solid rgba(255, 255, 255, 0.3);
+      border: 3px solid rgba(255,255,255,.3);
       border-radius: 50%;
-      border-top-color: white;
+      border-top-color: #fff;
       animation: spin 1s ease-in-out infinite;
     }
-
+    
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
 
-    /* Responsive Design */
-    @media (max-width: 768px) {
-      .container {
-        gap: 16px;
-      }
-      
-      .card {
-        padding: 20px;
-      }
-      
-      .header h1 {
-        font-size: 2rem;
-      }
-      
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-      
-      .status-grid {
-        grid-template-columns: 1fr;
-      }
-      
-      .btn-group {
-        flex-direction: column;
-      }
-      
-      .btn {
-        width: 100%;
-      }
+    @media (min-width: 720px){
+      .status .items{ grid-template-columns:1fr 1fr 1fr; }
     }
-
-    /* Utility Classes */
-    .text-mono {
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .text-center {
-      text-align: center;
-    }
-
-    .mb-4 {
-      margin-bottom: 16px;
-    }
-
-    .mt-4 {
-      margin-top: 16px;
-    }
-
-    .hidden {
-      display: none;
+    @media (max-width: 480px){
+      h1{font-size:24px}
+      h2{font-size:20px}
+      .table td{font-size:13px}
+      button,.btn-mini{height:42px}
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- Header -->
-    <header class="header">
-      <h1>🌐 DNS Record Manager</h1>
-      <p class="subtitle">จัดการ DNS Records ของคุณอย่างมืออาชีพ</p>
-    </header>
+  <div class="wrap">
 
-    <!-- Status Section -->
-    <section class="card">
-      <div class="card-header">
-        <h2 class="card-title">
-          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-          สถานะระบบ
-        </h2>
-      </div>
-      <div class="status-grid">
-        <div class="status-item">
-          <div class="status-label">เวลาเซิร์ฟเวอร์</div>
-          <div id="serverTime" class="status-value time text-mono">—</div>
+    <!-- TOP STATUS BAR -->
+    <div class="card status" aria-live="polite">
+      <h2 style="margin-bottom:2px">Status</h2>
+      <div class="items">
+        <div class="pillstat">
+          <div class="k">Server Time</div>
+          <div id="serverTime" class="v mono">—</div>
         </div>
-        <div class="status-item">
-          <div class="status-label">IP ของคุณ</div>
-          <div id="yourIp" class="status-value ip text-mono">—</div>
+        <div class="pillstat">
+          <div class="k">Your IP</div>
+          <div id="yourIp" class="v mono">—</div>
         </div>
-        <div class="status-item">
-          <div class="status-label">ตำแหน่ง</div>
-          <div id="yourLoc" class="status-value location">—</div>
+        <div class="pillstat">
+          <div class="k">Location</div>
+          <div id="yourLoc" class="v">—</div>
         </div>
       </div>
-    </section>
+    </div>
 
-    <!-- DNS Record Form -->
-    <section class="card">
-      <div class="card-header">
-        <h2 class="card-title">
-          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-          </svg>
-          เพิ่ม / แก้ไข DNS Record
-        </h2>
-      </div>
-      
+    <!-- DNS Record -->
+    <div class="card">
+      <h1>DNS RECORD</h1>
+      <p class="byline">Power By : Jue Htet</p>
+
       <form id="dnsForm" autocomplete="off">
-        <div class="form-grid">
-          <div class="form-group">
-            <label class="form-label" for="type">
-              <svg class="icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
-              </svg>
-              ประเภท
-            </label>
-            <select class="form-select" id="type" required>
-              <option value="A">A Record</option>
-              <option value="AAAA">AAAA Record</option>
-              <option value="CNAME">CNAME Record</option>
-              <option value="TXT">TXT Record</option>
-              <option value="MX">MX Record</option>
-              <option value="NS">NS Record</option>
-              <option value="CAA">CAA Record</option>
-              <option value="HTTPS">HTTPS Record</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="host">
-              <svg class="icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-              </svg>
-              โฮสต์
-            </label>
-            <input class="form-input" id="host" type="text" placeholder="sub (หรือ sub.dnstt.site)" required />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" id="contentLabel" for="content">
-              <svg class="icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-              </svg>
-              ที่อยู่ IPv4
-            </label>
-            <input class="form-input" id="content" type="text" placeholder="เช่น 203.0.113.10" required />
-          </div>
-
-          <div class="form-group hidden" id="prioRow">
-            <label class="form-label" for="priority">
-              <svg class="icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-              </svg>
-              ความสำคัญ
-            </label>
-            <input class="form-input" id="priority" type="number" min="0" max="65535" placeholder="10 (สำหรับ MX เท่านั้น)" />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="ttl">
-              <svg class="icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              TTL
-            </label>
-            <select class="form-select" id="ttl">
-              <option value="1" selected>ออโต้</option>
-              <option value="60">60 วินาที</option>
-              <option value="120">120 วินาที</option>
-              <option value="300">300 วินาที</option>
-              <option value="600">600 วินาที</option>
-              <option value="1800">1800 วินาที</option>
-              <option value="3600">3600 วินาที</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Proxy Toggle -->
-        <div class="toggle-group mb-4" id="proxiedRow">
-          <div>
-            <label class="form-label">Cloudflare Proxy</label>
-            <div class="text-muted" style="font-size: 0.875rem; margin-top: 4px;">
-              เปิดใช้งาน proxy สำหรับ A, AAAA, CNAME records
-            </div>
-          </div>
-          <label class="toggle">
-            <input id="proxied" type="checkbox" checked />
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-
-        <!-- Buttons -->
-        <div class="btn-group">
-          <button type="submit" class="btn btn-primary">
-            <svg class="icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            เพิ่ม / อัพเดท
-          </button>
-          <button type="button" id="resetBtn" class="btn btn-secondary">
-            <svg class="icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-            </svg>
-            รีเซ็ต
-          </button>
-        </div>
-
-        <!-- Message -->
-        <div id="msg" class="message hidden"></div>
-
-        <!-- Help Text -->
-        <div class="text-muted mt-4" style="font-size: 0.875rem;">
-          <strong>หมายเหตุ:</strong> ถ้าใส่ host แบบสั้น (เช่น "app") ระบบจะแปลงเป็น "app.dnstt.site" ให้อัตโนมัติ
-        </div>
-      </form>
-    </section>
-
-    <!-- Lookup Section -->
-    <section class="card">
-      <div class="card-header">
-        <h2 class="card-title">
-          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-          </svg>
-          ค้นหาโฮสต์ (Lookup)
-        </h2>
-      </div>
-      
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label" for="lookupHost">โฮสต์</label>
-          <input class="form-input" id="lookupHost" type="text" placeholder="sub (หรือชื่อโฮสต์เต็ม)" />
-        </div>
-      </div>
-      
-      <div class="btn-group mt-4">
-        <button type="button" id="lookupBtn" class="btn btn-primary">
-          <svg class="icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-          </svg>
-          ค้นหา
-        </button>
-        <button type="button" id="lookupReset" class="btn btn-secondary">ล้าง</button>
-      </div>
-      
-      <div id="lookupMsg" class="message hidden"></div>
-    </section>
-
-    <!-- Cloudflare DNS Management -->
-    <section class="card">
-      <div class="card-header">
-        <h2 class="card-title">
-          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path>
-          </svg>
-          จัดการ DNS Records
-        </h2>
-      </div>
-      
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label" for="cfName">ค้นหา</label>
-          <input class="form-input" id="cfName" placeholder="ค้นหาด้วยชื่อหรือเนื้อหา (รองรับการค้นหาแบบบางส่วน)" />
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label" for="cfType">ประเภท</label>
-          <select class="form-select" id="cfType">
-            <option value="">ทั้งหมด</option>
-            <option>A</option><option>AAAA</option><option>CNAME</option>
-            <option>TXT</option><option>MX</option><option>NS</option>
-            <option>CAA</option><option>HTTPS</option>
+        <div class="row">
+          <label for="type">Type</label>
+          <select id="type" required>
+            <option value="A">A</option>
+            <option value="AAAA">AAAA</option>
+            <option value="CNAME">CNAME</option>
+            <option value="TXT">TXT</option>
+            <option value="MX">MX</option>
+            <option value="NS">NS</option>
+            <option value="CAA">CAA</option>
+            <option value="HTTPS">HTTPS</option>
           </select>
         </div>
-      </div>
-      
-      <div class="btn-group">
-        <button type="button" id="cfSearch" class="btn btn-primary">ค้นหา</button>
-        <button type="button" id="cfClear" class="btn btn-secondary">ล้าง</button>
-      </div>
-      
-      <div id="searchMsg" class="message">
-        ผลลัพธ์ด้านล่างมาจากการ query ข้อมูลจาก Cloudflare โดยตรง
-      </div>
 
-      <!-- Results Table -->
-      <div class="table-container">
-        <table class="table">
+        <div class="row">
+          <label for="host">Host</label>
+          <input id="host" type="text" placeholder="sub (or sub.dnstt.site)" required />
+        </div>
+
+        <div class="row">
+          <label id="contentLabel" for="content">IPv4 Address</label>
+          <input id="content" type="text" placeholder="e.g. 203.0.113.10" required />
+        </div>
+
+        <div class="row" id="prioRow" style="display:none">
+          <label for="priority">Priority</label>
+          <input id="priority" type="number" min="0" max="65535" placeholder="10 (MX only)" />
+        </div>
+
+        <div class="row">
+          <label for="ttl">TTL</label>
+          <select id="ttl">
+            <option value="1" selected>Auto</option>
+            <option value="60">60</option>
+            <option value="120">120</option>
+            <option value="300">300</option>
+            <option value="600">600</option>
+            <option value="1800">1800</option>
+            <option value="3600">3600</option>
+          </select>
+        </div>
+
+        <!-- Proxy toggle -->
+        <div class="row" id="proxiedRow">
+          <label for="proxied">Proxy through Cloudflare</label>
+          <div>
+            <label class="switch" aria-label="Proxy through Cloudflare">
+              <input id="proxied" type="checkbox" checked />
+              <span class="slider" aria-hidden="true"></span>
+            </label>
+            <span class="pill">A / AAAA / CNAME only</span>
+            <div class="cf-note">DNS ONLY အတွက် ခလုတ်ကို ပိတ်ပေးပါ။</div>
+          </div>
+        </div>
+
+        <div class="btns">
+          <button type="submit">Add / Update</button>
+          <button type="button" id="resetBtn">Reset</button>
+        </div>
+        <div id="msg"></div>
+
+        <div class="small" style="margin-top:8px">
+          Host ကို short (e.g. <span class="mono">app</span>) ရိုက်ရင်
+          <span class="mono">app.dnstt.site</span> လို append လုပ်ပေးမယ်။
+        </div>
+      </form>
+    </div>
+
+    <!-- Host to IP -->
+    <div class="card">
+      <h2>Host to IP <span class="small">(Lookup)</span></h2>
+      <div class="row">
+        <label for="lookupHost">Host</label>
+        <input id="lookupHost" type="text" placeholder="sub (or full hostname)" />
+      </div>
+      <div class="btns" style="margin-top:12px">
+        <button type="button" id="lookupBtn">Lookup</button>
+        <button type="button" id="lookupReset">Clear</button>
+      </div>
+      <div id="lookupMsg"></div>
+    </div>
+
+    <!-- Cloudflare Search / Manage -->
+    <div class="card">
+      <h2>Cloudflare DNS Records (Search / Edit / Delete)</h2>
+      <div class="row">
+        <label for="cfName">Search</label>
+        <input id="cfName" placeholder="Search by name or content (partial match)" />
+      </div>
+      <div class="row">
+        <label for="cfType">Type</label>
+        <select id="cfType">
+          <option value="">(Any)</option>
+          <option>A</option><option>AAAA</option><option>CNAME</option>
+          <option>TXT</option><option>MX</option><option>NS</option>
+          <option>CAA</option><option>HTTPS</option>
+        </select>
+      </div>
+      <div class="btns">
+        <button type="button" id="cfSearch">Search</button>
+        <button type="button" id="cfClear">Clear</button>
+      </div>
+      <div id="searchMsg" class="small">အောက်က results က Cloudflare မှ တိုက်ရိုက် query လုပ်ထားတာပါ။</div>
+
+      <div class="table-wrap">
+        <table class="table" aria-label="Cloudflare search results">
           <thead>
             <tr>
-              <th>ประเภท</th>
-              <th>ชื่อ</th>
-              <th>เนื้อหา</th>
-              <th>TTL</th>
-              <th>Proxy</th>
-              <th>การดำเนินการ</th>
+              <th>Type</th><th>Name</th><th>Content</th><th>TTL</th><th>Proxy</th><th>Actions</th>
             </tr>
           </thead>
           <tbody id="cfBody"></tbody>
         </table>
       </div>
 
-      <!-- Pagination -->
-      <div class="btn-group" style="justify-content: flex-end; margin-top: 20px;">
-        <button class="btn btn-outline btn-sm" id="prevPage">ก่อนหน้า</button>
-        <button class="btn btn-outline btn-sm" id="nextPage">ถัดไป</button>
+      <div class="btns" style="justify-content:flex-end;margin-top:10px">
+        <button class="btn-mini" id="prevPage">Prev</button>
+        <button class="btn-mini" id="nextPage">Next</button>
       </div>
-    </section>
+    </div>
 
-    <!-- Footer -->
-    <footer class="footer">
-      <p>พัฒนาโดย Jue Htet ด้วยใจรัก ❤️</p>
-    </footer>
+    <div class="footer">
+      Admin : Jue Htet မှစေတနာဖြင့် ပြုလုပ်ပေးထားပါသည်။
+    </div>
   </div>
 
-  <!-- Theme Toggle -->
-  <button id="themeToggle" class="theme-toggle" title="สลับธีม">
-    <svg class="icon-sun" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+  <!-- Theme toggle -->
+  <button id="themeToggle" class="theme-fab" title="Dark/Light Toggle" aria-label="Toggle dark or light theme">
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="4"></circle>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
     </svg>
-    <svg class="icon-moon hidden" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
     </svg>
   </button>
 
   <script>
-    // เก็บโค้ด JavaScript เดิมทั้งหมดไว้ที่นี่
-    // (เนื่องจากโค้ด JavaScript ยาวมาก ให้คัดลอกมาจากไฟล์เดิม)
-    
-    // ตัวอย่างการปรับปรุงฟังก์ชันแสดงผลข้อความ
-    function show(kind, text, el = msg) {
-      el.innerHTML = String(text);
-      el.className = 'message';
-      el.classList.remove('hidden');
-      
-      if (kind === "ok") {
-        el.classList.add('message-success');
-      } else if (kind === "warn") {
-        el.classList.add('message-warning');
-      } else {
-        el.classList.add('message-error');
+    /* === UPDATED DOMAIN & WORKER ENDPOINT === */
+    const ROOT = "dnstt.site";
+    const API_BASE = "https://mydnstt.hunmai.workers.dev";
+    const API_URL  = API_BASE + "/dns";
+
+    const typeEl=document.getElementById("type"),
+      hostEl=document.getElementById("host"),
+      contentEl=document.getElementById("content"),
+      contentLabel=document.getElementById("contentLabel"),
+      prioRow=document.getElementById("prioRow"),
+      priorityEl=document.getElementById("priority"),
+      proxiedRow=document.getElementById("proxiedRow"),
+      proxiedEl=document.getElementById("proxied"),
+      ttlEl=document.getElementById("ttl"),
+      msg=document.getElementById("msg");
+
+    const serverTimeEl = document.getElementById("serverTime");
+    const yourIpEl     = document.getElementById("yourIp");
+    const yourLocEl    = document.getElementById("yourLoc");
+
+    (function initTheme(){
+      try{
+        const root = document.documentElement;
+        const saved = localStorage.getItem("theme");
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const initial = saved || (prefersDark ? "dark" : "light");
+        root.setAttribute("data-theme", initial);
+      }catch(e){}
+    })();
+    document.getElementById("themeToggle").addEventListener("click", ()=>{
+      const root = document.documentElement;
+      const cur = root.getAttribute("data-theme") || "light";
+      const next = (cur === "light") ? "dark" : "light";
+      root.setAttribute("data-theme", next);
+      try{ localStorage.setItem("theme", next); }catch(e){}
+    });
+
+    async function fetchJSON(url, opt){
+      const r = await fetch(url, opt);
+      if(!r.ok) throw new Error(r.status);
+      return r.json();
+    }
+
+    async function loadFromCFTrace(){
+      try{
+        const r = await fetch("https://1.1.1.1/cdn-cgi/trace", {cache:"no-store"});
+        const t = await r.text();
+        const map = Object.fromEntries(
+          t.trim().split("\n").map(l => l.split("=")).map(([k,v])=>[k, v])
+        );
+        if(map.ts){
+          let ms = Number(map.ts) * 1000;
+          const tzStr = Intl.DateTimeFormat().resolvedOptions().timeZone || "Local";
+          const tick = () => {
+            serverTimeEl.textContent = new Date(ms).toLocaleString(undefined, {
+              year:"numeric", month:"short", day:"2-digit",
+              hour:"2-digit", minute:"2-digit", second:"2-digit"
+            }) + ` (${tzStr})`;
+            ms += 1000;
+          };
+          tick(); setInterval(tick, 1000);
+        }else{
+          serverTimeEl.textContent = "Unavailable";
+        }
+        if(map.ip) yourIpEl.textContent = map.ip;
+        if(!yourLocEl.textContent || yourLocEl.textContent === "—" || yourLocEl.textContent === "Unavailable"){
+          yourLocEl.textContent = map.loc || "Unavailable";
+        }
+      }catch(e){
+        if(!serverTimeEl.textContent || serverTimeEl.textContent === "—") serverTimeEl.textContent = "Unavailable";
       }
     }
 
-    // ฟังก์ชันอื่นๆ ทั้งหมดให้คงไว้เหมือนเดิม
-    // ... (โค้ด JavaScript เดิม)
+    async function loadStatus(){
+      let haveWT = false;
+      try{
+        const t = await fetchJSON("https://worldtimeapi.org/api/ip");
+        const dt = new Date(t.datetime);
+        let base = dt.getTime();
+        const tick = () => {
+          serverTimeEl.textContent = new Date(base).toLocaleString(undefined, {
+            year:"numeric", month:"short", day:"2-digit",
+            hour:"2-digit", minute:"2-digit", second:"2-digit"
+          }) + ` (${t.timezone})`;
+          base += 1000;
+        };
+        tick(); setInterval(tick, 1000);
+        if(t.client_ip) yourIpEl.textContent = t.client_ip;
+        haveWT = true;
+      }catch(e){}
+
+      try{
+        const a = await fetchJSON("https://ipapi.co/json/");
+        if(a.ip) yourIpEl.textContent = a.ip;
+        const loc = [a.city, a.region, a.country_name].filter(Boolean).join(", ");
+        yourLocEl.textContent = loc || "—";
+      }catch(e){
+        try{
+          const b = await fetchJSON("https://ipwho.is/");
+          if(b.ip) yourIpEl.textContent = b.ip;
+          const loc = [b.city, b.region, b.country].filter(Boolean).join(", ");
+          yourLocEl.textContent = loc || "—";
+        }catch(e2){
+          try{
+            const c = await fetchJSON("https://api.ipify.org?format=json");
+            if(c.ip) yourIpEl.textContent = c.ip;
+          }catch(e3){}
+          if(!yourLocEl.textContent || yourLocEl.textContent === "—") yourLocEl.textContent = "Unavailable";
+        }
+      }
+
+      if(!haveWT){
+        await loadFromCFTrace();
+      }
+    }
+    loadStatus();
+
+    /* ===== Highlight helpers ===== */
+    const ipV4Test = /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$/i;
+    const ipV6Test = /^(?:[A-Fa-f0-9]{1,4}:){1,7}[A-Fa-f0-9]{1,4}$/;
+    const ipV4Match = /\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b/g;
+    const ipV6Match = /\b(?:[A-Fa-f0-9]{1,4}:){1,7}[A-Fa-f0-9]{1,4}\b/g;
+    const hostMatch = /\b(?=.{1,253}\b)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))+\.?\b/gi;
+
+    function isIP(val){
+      const s = String(val||"").trim();
+      return ipV4Test.test(s) || ipV6Test.test(s);
+    }
+
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
+    function escapeHtmlAttr(s){ return String(s).replace(/"/g,'&quot;'); }
+
+    function highlightInline(text){
+      let out = text.replace(ipV4Match, m=>`<span class="ip-accent mono">${m}</span>`);
+      out = out.replace(ipV6Match, m=>`<span class="ip-accent mono">${m}</span>`);
+      out = out.replace(hostMatch, m=>{
+        if(ipV4Test.test(m) || ipV6Test.test(m)) return m;
+        return `<span class="mono" style="color:var(--ok-bright);font-weight:800">${m}</span>`;
+      });
+      return out;
+    }
+
+    function show(kind, text, el=msg){
+      el.innerHTML = highlightInline(String(text));
+      el.className = "";
+      el.classList.add(kind==="ok"?"msg-ok":kind==="warn"?"msg-warn":"msg-err");
+    }
+
+    function setPlaceholders(){
+      const t=typeEl.value;
+      prioRow.style.display=(t==="MX")?"grid":"none";
+      proxiedRow.style.display=(["A","AAAA","CNAME"].includes(t))?"grid":"none";
+      const placeholders={
+        "A":["IPv4 Address","e.g. 203.0.113.10"],
+        "AAAA":["IPv6 Address","e.g. 2001:db8::1"],
+        "CNAME":["Target Hostname","e.g. target.example.com"],
+        "TXT":["TXT Value",'e.g. v=spf1 include:_spf.example ~all'],
+        "MX":["Mail Server","e.g. mail.example.com"],
+        "NS":["Nameserver Host","e.g. ns1.example.com"],
+        "CAA":["CAA Value",'e.g. 0 issue "letsencrypt.org"'],
+        "HTTPS":["Value","HTTPS record value"]
+      };
+      const p=placeholders[t]; contentLabel.textContent=p[0]; contentEl.placeholder=p[1];
+    }
+    typeEl.addEventListener("change",setPlaceholders); setPlaceholders();
+
+    function normalizeHost(raw){
+      const v=(raw||"").trim().replace(/\s+/g,"");
+      if(!v)return"";
+      if(v===ROOT||v.endsWith("."+ROOT))return v.toLowerCase();
+      if(v.includes(".")) return v.toLowerCase();
+      return (v+"."+ROOT).toLowerCase();
+    }
+
+    document.getElementById("resetBtn").addEventListener("click",()=>{
+      document.getElementById("dnsForm").reset(); setPlaceholders();
+      msg.textContent=""; msg.className=""; hostEl.focus();
+    });
+
+    document.getElementById("dnsForm").addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      
+      // Add loading state
+      submitBtn.innerHTML = '<div class="loading"></div> Processing...';
+      submitBtn.disabled = true;
+      
+      const type=typeEl.value.trim().toUpperCase(),
+        name=normalizeHost(hostEl.value),
+        content=contentEl.value.trim(),
+        ttl=parseInt(ttlEl.value,10)||300,
+        proxied=!!proxiedEl.checked;
+
+      if(!name){show("err","❌ Host required");return;}
+      if(!(name===ROOT||name.endsWith("."+ROOT))){show("err",`❌ Host must be under ${ROOT}`);return;}
+      if(!content){show("err","❌ Content required");return;}
+
+      const payload={type,name,content,ttl};
+      if(type==="MX"){
+        const p=parseInt(priorityEl.value,10);
+        if(Number.isNaN(p)){show("err","❌ MX priority required");return;}
+        payload.priority=p;
+      }
+      if(["A","AAAA","CNAME"].includes(type)) payload.proxied=proxied;
+
+      show("warn","Processing…");
+      try{
+        const res=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+        const data=await res.json();
+        if(data.success){
+          const r=data.record||data.result||{};
+          const c = (r.content||content);
+          const n = (r.name||name);
+          show("ok",`Done ✅ : ${c} → ${n} (${data.action||'create'})`);
+          await runSearch();
+        }else{
+          show("err","❌ Error: "+(data.error||"Unknown"));
+        }
+      }catch(err){ show("err","❌ Network error: "+err.message); }
+      finally {
+        // Restore button state
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+
+    /* ===== Lookup (DoH) ===== */
+    const lookupHostEl=document.getElementById("lookupHost");
+    const lookupMsg=document.getElementById("lookupMsg");
+    document.getElementById("lookupReset").addEventListener("click", ()=>{ lookupHostEl.value=""; lookupMsg.textContent=""; lookupMsg.className=""; });
+    document.getElementById("lookupBtn").addEventListener("click", lookup);
+    lookupHostEl.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); lookup(); }});
+    async function doh(name,type){
+      const url=`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=${type}`;
+      const res=await fetch(url,{headers:{accept:"application/dns-json"}});
+      if(!res.ok) throw new Error(`DoH ${type} failed (${res.status})`);
+      return res.json();
+    }
+    function formatAnswers(ans=[]){ return ans?.filter(a=>a?.data).map(a=>a.data)||[]; }
+    async function lookup(){
+      const lookupBtn = document.getElementById("lookupBtn");
+      const originalText = lookupBtn.textContent;
+      
+      // Add loading state
+      lookupBtn.innerHTML = '<div class="loading"></div> Looking up...';
+      lookupBtn.disabled = true;
+      
+      const name=normalizeHost(lookupHostEl.value);
+      if(!name){show("err","❌ Host required",lookupMsg);return;}
+      show("warn","Looking up…",lookupMsg);
+      try{
+        const [a4,a6]=await Promise.allSettled([doh(name,"A"),doh(name,"AAAA")]);
+        const v4=(a4.status==="fulfilled")?formatAnswers(a4.value?.Answer):[];
+        const v6=(a6.status==="fulfilled")?formatAnswers(a6.value?.Answer):[];
+        if(v4.length===0 && v6.length===0){ show("err",`No A/AAAA answers for ${name}`,lookupMsg); return; }
+        const chunks=[];
+        if(v4.length) chunks.push(`A (${v4.length}) → ${v4.map(ip=>`<span class="cell-content ip mono">${ip}</span>`).join(", ")}`);
+        if(v6.length) chunks.push(`AAAA (${v6.length}) → ${v6.map(ip=>`<span class="cell-content ip mono">${ip}</span>`).join(", ")}`);
+        lookupMsg.className="msg-ok";
+        lookupMsg.innerHTML = `<span class="cell-content host mono">${name}</span>\n${chunks.join("\n")}`;
+      }catch(err){ show("err","❌ Lookup error: "+err.message,lookupMsg); }
+      finally {
+        // Restore button state
+        lookupBtn.innerHTML = originalText;
+        lookupBtn.disabled = false;
+      }
+    }
+
+    /* ===== Cloudflare Search / Manage ===== */
+    const cfName=document.getElementById("cfName");
+    const cfType=document.getElementById("cfType");
+    const cfBody=document.getElementById("cfBody");
+    const searchMsg=document.getElementById("searchMsg");
+    document.getElementById("cfClear").addEventListener("click",()=>{ cfName.value=""; cfType.value=""; page=1; runSearch(); });
+    document.getElementById("cfSearch").addEventListener("click",()=>{ page=1; runSearch(); });
+    document.getElementById("prevPage").addEventListener("click", ()=>{ if(page>1){ page--; runSearch(); }});
+    document.getElementById("nextPage").addEventListener("click", ()=>{ page++; runSearch(); });
+
+    let page=1;
+    function classifyContent(val){
+      return isIP(val) ? 'ip' : 'host';
+    }
+    async function runSearch(){
+      const searchBtn = document.getElementById("cfSearch");
+      const originalText = searchBtn.textContent;
+      
+      // Add loading state
+      searchBtn.innerHTML = '<div class="loading"></div> Searching...';
+      searchBtn.disabled = true;
+      
+      const params=new URLSearchParams();
+      if(cfName.value.trim()) params.set("name", cfName.value.trim());
+      if(cfType.value) params.set("type", cfType.value);
+      params.set("page", String(page));
+      params.set("per_page","50");
+      searchMsg.textContent="Searching…"; searchMsg.className="msg-warn";
+
+      try{
+        const res=await fetch(`${API_URL}?${params.toString()}`,{method:"GET"});
+        const data=await res.json();
+        if(!data.success){ throw new Error(data.error||"Search failed"); }
+        const rows=data.result||[];
+        cfBody.innerHTML="";
+        if(rows.length===0){
+          cfBody.innerHTML=`<tr><td colspan="6" class="small">No records found on this page.</td></tr>`;
+        }else{
+          for(const r of rows){
+            const tr=document.createElement("tr");
+            const contentClass = classifyContent(r.content||"");
+            const contentHTML = contentClass==='ip'
+              ? `<span class="cell-content ip mono">${escapeHtml(r.content||"")}</span>`
+              : `<span class="cell-content host mono">${escapeHtml(r.content||"")}</span>`;
+            tr.innerHTML = `
+              <td class="cell-type"><span class="mono">${r.type||""}</span></td>
+              <td class="cell-name mono">${escapeHtml(r.name||"")}</td>
+              <td class="cell-content-wrap">${contentHTML}</td>
+              <td class="cell-ttl">${r.ttl||""}</td>
+              <td class="cell-prox">${(["A","AAAA","CNAME"].includes(r.type) && r.proxied)? "🟩 proxied":"⬜ DNS only"}</td>
+              <td class="cell-act">
+                <div class="row-actions">
+                  <button class="btn-mini" data-act="edit" data-id="${r.id}">Edit</button>
+                  <button class="btn-mini" data-act="load" data-id="${r.id}">Load</button>
+                  <button class="btn-mini ghost" data-act="delete" data-id="${r.id}">Delete</button>
+                </div>
+              </td>`;
+            tr.dataset.row = JSON.stringify(r);
+            cfBody.appendChild(tr);
+          }
+        }
+        searchMsg.textContent=`Page ${data.page||page} – ${rows.length} record(s)`; searchMsg.className="small";
+      }catch(err){
+        searchMsg.textContent="❌ "+err.message;
+        searchMsg.className="msg-err";
+      }
+      finally {
+        // Restore button state
+        searchBtn.innerHTML = originalText;
+        searchBtn.disabled = false;
+      }
+    }
+    runSearch();
+
+    function typeSelectHTML(cur){
+      const types=["A","AAAA","CNAME","TXT","MX","NS","CAA","HTTPS"];
+      return `<select class="sel edit-type">
+        ${types.map(t=>`<option value="${t}" ${t===cur?'selected':''}>${t}</option>`).join("")}
+      </select>`;
+    }
+    function proxToggleHTML(checked){
+      return `<label class="switch switch-mini">
+        <input class="edit-prox" type="checkbox" ${checked?'checked':''} />
+        <span class="slider"></span>
+      </label>`;
+    }
+    function startEdit(tr, row){
+      if(tr.dataset.editing==="1") return;
+      tr.dataset.editing="1";
+
+      tr.querySelector(".cell-type").innerHTML = typeSelectHTML(row.type||"A");
+      tr.querySelector(".cell-name").innerHTML = `<input class="inpt edit-name" value="${escapeHtmlAttr(row.name||"")}" />`;
+      tr.querySelector(".cell-content-wrap").innerHTML = `<input class="inpt edit-content" value="${escapeHtmlAttr(row.content||"")}" />`;
+      tr.querySelector(".cell-ttl").innerHTML = `<input class="inpt edit-ttl" type="number" min="1" value="${row.ttl||300}" />`;
+
+      const proxCell = tr.querySelector(".cell-prox");
+      if(["A","AAAA","CNAME"].includes(row.type||"")){
+        proxCell.innerHTML = proxToggleHTML(!!row.proxied);
+      }else{
+        proxCell.innerHTML = `<span class="small muted">—</span>`;
+      }
+
+      const actCell = tr.querySelector(".cell-act .row-actions");
+      actCell.innerHTML = `
+        <button class="btn-mini" data-act="save" data-id="${row.id}">Save</button>
+        <button class="btn-mini ghost" data-act="cancel" data-id="${row.id}">Cancel</button>
+      `;
+    }
+    function cancelEdit(tr, row){
+      tr.dataset.editing="0";
+      tr.querySelector(".cell-type").innerHTML = `<span class="mono">${row.type||""}</span>`;
+      tr.querySelector(".cell-name").innerHTML = `${escapeHtml(row.name||"")}`;
+      const cls = isIP(row.content||"") ? 'ip' : 'host';
+      tr.querySelector(".cell-content-wrap").innerHTML =
+        cls==='ip'
+          ? `<span class="cell-content ip mono">${escapeHtml(row.content||"")}</span>`
+          : `<span class="cell-content host mono">${escapeHtml(row.content||"")}</span>`;
+      tr.querySelector(".cell-ttl").innerHTML = `${row.ttl||""}`;
+      tr.querySelector(".cell-prox").innerHTML =
+        (["A","AAAA","CNAME"].includes(row.type) && row.proxied) ? "🟩 proxied" : "⬜ DNS only";
+      const actCell = tr.querySelector(".cell-act .row-actions");
+      actCell.innerHTML = `
+        <button class="btn-mini" data-act="edit" data-id="${row.id}">Edit</button>
+        <button class="btn-mini" data-act="load" data-id="${row.id}">Load</button>
+        <button class="btn-mini ghost" data-act="delete" data-id="${row.id}">Delete</button>
+      `;
+    }
+
+    async function saveEdit(tr, row){
+      const t = tr.querySelector(".edit-type").value;
+      const nameRaw = tr.querySelector(".edit-name").value;
+      const content = tr.querySelector(".edit-content").value.trim();
+      const ttl = parseInt(tr.querySelector(".edit-ttl").value,10) || row.ttl || 300;
+      const name = normalizeHost(nameRaw);
+
+      if(!name){searchMsg.textContent="❌ Host required"; searchMsg.className="msg-err"; return;}
+      if(!content){searchMsg.textContent="❌ Content required"; searchMsg.className="msg-err"; return;}
+
+      const payload = { type:t, name, content, ttl };
+      if(t==="MX"){ payload.priority = (row.priority!=null) ? row.priority : 10; }
+      if(["A","AAAA","CNAME"].includes(t)){
+        const prox = tr.querySelector(".edit-prox");
+        payload.proxied = prox ? !!prox.checked : false;
+      }
+
+      searchMsg.textContent="Saving…"; searchMsg.className="msg-warn";
+      try{
+        const res=await fetch(`${API_URL}/${row.id}`,{
+          method:"PUT", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(payload)
+        });
+        const data=await res.json();
+        if(!data.success) throw new Error(data.error||"Update failed");
+        searchMsg.textContent="Updated ✅"; searchMsg.className="msg-ok";
+        await runSearch();
+      }catch(err){
+        searchMsg.textContent="❌ "+err.message; searchMsg.className="msg-err";
+      }
+    }
+
+    document.getElementById("cfBody").addEventListener("click", async (e)=>{
+      const btn=e.target.closest("button"); if(!btn) return;
+      const act=btn.getAttribute("data-act");
+      const tr=btn.closest("tr");
+      const row=JSON.parse(tr.dataset.row||"{}");
+
+      if(act==="load"){
+        typeEl.value=row.type||"A"; setPlaceholders();
+        hostEl.value=row.name||"";
+        contentEl.value=row.content||"";
+        ttlEl.value=String(row.ttl||300);
+        if(["A","AAAA","CNAME"].includes(row.type||"")) proxiedEl.checked=!!row.proxied;
+        if(row.type==="MX" && row.priority!=null){ priorityEl.value = row.priority; }
+        show("ok","Loaded into form. Edit and click “Add / Update”.");
+        window.scrollTo({top:0,behavior:"smooth"});
+      }
+
+      if(act==="edit"){ startEdit(tr, row); }
+      if(act==="cancel"){ cancelEdit(tr, row); }
+      if(act==="save"){ await saveEdit(tr, row); }
+
+      if(act==="delete"){
+        if(!confirm(`Delete DNS record?\n${row.type} ${row.name} -> ${row.content}`)) return;
+        searchMsg.textContent="Deleting…"; searchMsg.className="msg-warn";
+        try{
+          const res=await fetch(`${API_URL}/${row.id}`,{method:"DELETE"});
+          const data=await res.json();
+          if(!data.success) throw new Error(data.error||"Delete failed");
+          searchMsg.textContent="Deleted ✅"; searchMsg.className="msg-ok";
+          await runSearch();
+        }catch(err){ searchMsg.textContent="❌ "+err.message; searchMsg.className="msg-err"; }
+      }
+    });
   </script>
 </body>
   </html>
